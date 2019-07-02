@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Run a blue green deployment
+# TODO: Implement ;-)
+iamge::create::run() {
+  echo "Running a blue-green deployment"
+}
+
+iamge::create::description() {
+  echo "Deploy with a blue-green strategy"
+}
+
+iamge::create::usage() {
+  cat <<EOT
+  -d --deployment <name>    Name of deployment for which to perform a blue-green deployment (mandatory)
+  -i --image <image>        Full image name of the target version, including tag (mandatory)
+EOT
+}

@@ -12,35 +12,79 @@ ARGS="$@"
 # evaluation of functions for return values)
 set -eu
 
+function check_cmd_existence() {
+  local commands="$@"
+
+
+}
+
 # Main loop evaluating sub commands
 run() {
-    local first_arg=${1:-}
-    local cmd_dir="$(basedir)/commands"
-    local command
-    if [ -n "$first_arg" ] && [[ ${first_arg} != -* ]]; then
-      command="$first_arg"
-      if [ ! -f "$cmd_dir/$command" ]; then
-        echo
-        echo ">>>> Unknown command '$command'"
-        echo
-        display_help
-        exit 1
-      fi
+  local args="$@"
+  local commands=()
+  for arg in $args; do
+    if [[ ${arg} != -* ]]; then
+      commands+=("${arg}")
+    fi
+  done
+
+  if [[ ${#commands[@]} -eq 0 ]]; then
+    commands+=("help")
+    echo "No command given"
+  fi
+    echo
+
+  if [ "${commands[0]}" = "help" ] || $(hasflag --help -h); then
+    display_help ${command:-}
+    exit 0
+  fi
+
+  local cmd_dir="$(basedir)/commands"
+  local valid_cmd_parts=()
+  for cmd in $commands; do
+    local path
+
+    if [[ ${#valid_cmd_parts[@]} -eq 0 ]]; then
+      path=$(join_by '/' "$cmd")
     else
-      command="help"
-      echo "No command given"
-      echo
+      path=$(join_by '/' "${valid_cmd_parts[@]} $cmd")
     fi
 
-    if [ "${command}" = "help" ] || $(hasflag --help -h); then
-        display_help ${command:-}
-        exit 0
+    if [[ ! -e "$cmd_dir/$path" ]]; then
+      echo BREAK OUT!
+      exit 1
+    else
+      echo "cool: $cmd_dir/$path"
+      valid_cmd_parts+=("${cmd}")
     fi
+  done
 
-    source "$cmd_dir/$command"
+  path=$(join_by '/' "${valid_cmd_parts[@]}")
+  execution_path=$(join_by '::' "${valid_cmd_parts[@]}")
 
-    eval "${command}::run"
+  echo $cmd_dir/$path
+  if [[ -d "$cmd_dir/$path" ]]; then
+    source "$cmd_dir/$path/init"
+    display_help $(join_by ' ' "${valid_cmd_parts[@]}")
+  elif [[ -f ${path} ]]; then
+    source "$cmd_dir/$path"
+    eval "${execution_path}::run"
+  else
+    echo
+    echo ">>>> Unknown command '$(join_by ' ' "${valid_cmd_parts[@]}")'"
+    echo
+    display_help
+    exit 1
+  fi
+
+  
+  echo  "$cmd_dir/$path"
+  echo "${execution_path}::run"
+  
 }
+
+
+# TODO print usage of subcommand
 
 display_help() {
   local command=${1:-}
